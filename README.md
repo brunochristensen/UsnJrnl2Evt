@@ -1,9 +1,18 @@
 # UsnJrnl2Evtx
 
-I was a SANS FOR508 course when [Mr. Carlos Cajigas](https://www.linkedin.com/in/carloscajigas/) said something to the effect of: "No one has made something like this".
+Shoutout to SANS FOR508 course instructor [Mr. Carlos Cajigas](https://www.linkedin.com/in/carloscajigas/) for the inspiration to develop this tool.
 
-Looking back I'm not sure if that was a challenge, but that's how it seemed at the time. So here we are.
+## Description
 
-## What it does
+Windows NTFS' USN Change Journal provide excellent insight into file metadata and volume specific file activity. UsnJrnl2Evtx utilizes Windows' fsutil.exe to continuouly fetch USN Journal entries and log them with other Windows event logs. These logs can then be analysed or ingested into a SIEM.
 
-UsnJrnl2Evtx utilizes the Windows fsutil.exe to periodically grab USN Journal entries and log them with other windows event logs. From there they can be exported to a SIEM or whatever makes you&mdash;the user&mdash;happy. :)
+## Usage
+
+Execution of usnjrnl2evtx.py will log USN Journal entries as they appear via ```fsutil usn readJournal C:```, with associated headers and journal information. Usnjrnl2Evtx will target the C:\ drive by default. 
+```
+python usnjrnl2evtx.py 
+```
+### Command-Line Options 
+
+```
+```
