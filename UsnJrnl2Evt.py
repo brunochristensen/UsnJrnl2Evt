@@ -3,6 +3,7 @@ import sys
 import signal
 import subprocess
 import argparse
+import json
 import win32evtlogutil
 import win32evtlog
 import win32event
@@ -15,6 +16,7 @@ journal_queue = Queue()
 stop_event = Event()
 
 EVENT_SOURCE = "USNJournalLogger"
+EVENT_LOG = "USNJournalLog"
 EVENT_CATEGORY = 0
 EVENT_ID = 1000
 EVENT_TYPE = win32evtlog.EVENTLOG_INFORMATION_TYPE
@@ -25,7 +27,8 @@ header_keys = [
     b'Next USN',
     b'Start USN',
     b'Min major version',
-    b'Max major version']
+    b'Max major version'
+]
 
 entry_keys_v3p0 = [
     b'Usn',
@@ -40,7 +43,8 @@ entry_keys_v3p0 = [
     b'Security ID',
     b'Major version',
     b'Minor version',
-    b'Record length']
+    b'Record length'
+]
 
 USN_STATE_FILE = 'last_usn.txt'
 
@@ -75,11 +79,24 @@ def fsutil_capture(args):
         journal_queue.put(None)
 
 def log_entry(entry):
-    message = f"USN Entry:\n" + "\n".join(f"{k}: {v}" for k, v in entry.items())
-    print(message)
+    """
+    Serialize each USN entry as JSON for Winlogbeat ingestion and write to custom Event Log.
+    """
     try:
-        win32evtlogutil.ReportEvent(EVENT_SOURCE, EVENT_ID, eventCategory=EVENT_CATEGORY,
-                                    eventType=EVENT_TYPE, strings=[message])
+        msg_json = json.dumps(entry, ensure_ascii=False)
+    except Exception as e:
+        print(f"Error serializing entry to JSON: {e}")
+        msg_json = str(entry)
+    print(msg_json)
+    try:
+        win32evtlogutil.ReportEvent(
+            EVENT_SOURCE,
+            EVENT_ID,
+            eventCategory=EVENT_CATEGORY,
+            eventType=EVENT_TYPE,
+            strings=[msg_json],
+            eventLogType=EVENT_LOG
+        )
     except Exception as e:
         print(f"Failed to log event: {e}")
 
@@ -148,7 +165,12 @@ def main():
     args = parser.parse_args()
 
     try:
-        win32evtlogutil.AddSourceToRegistry(EVENT_SOURCE, sys.executable, "Application")
+        # Register a custom event source/log under USNJournalLog
+        win32evtlogutil.AddSourceToRegistry(
+            EVENT_SOURCE,
+            sys.executable,
+            EVENT_LOG
+        )
     except Exception:
         pass
 
